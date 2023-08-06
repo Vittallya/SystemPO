@@ -13,8 +13,8 @@ namespace SPO_LR_Lib
 
         public IEnumerable<Triad?> Optimize(IEnumerable<Triad?> triads)
         {
-            Dictionary<Triad, MutableTriad> d1 = new();
-            Dictionary<MutableTriad, Triad> d2 = new();
+            Dictionary<int, MutableTriad> d1 = new();
+            Dictionary<int, Triad> d2 = new();
 
             IEnumerable<MutableTriad> mutableTriads = triads.Select(y => y.GetMutableTriad(d1)).ToList();
 

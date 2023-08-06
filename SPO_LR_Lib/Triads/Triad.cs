@@ -33,13 +33,13 @@ namespace SPO_LR_Lib
             return Operation.GetHashCode() + Operand1.GetHashCode() + Operand2?.GetHashCode() ?? 0;
         }
 
-        internal MutableTriad GetMutableTriad(Dictionary<Triad, MutableTriad> linkContainer)
+        internal MutableTriad GetMutableTriad(Dictionary<int, MutableTriad> linkContainer)
         {
-            TriadOperand op1 = Operand1 is Triad tr1 ? linkContainer[tr1] : (TriadOperand)Operand1.Clone();
-            TriadOperand? op2 = Operand2 is Triad tr2 ? linkContainer[tr2] : Operand2?.Clone() as TriadOperand;
+            TriadOperand op1 = Operand1 is Triad tr1 ? linkContainer[tr1.Number] : (TriadOperand)Operand1.Clone();
+            TriadOperand? op2 = Operand2 is Triad tr2 ? linkContainer[tr2.Number] : Operand2?.Clone() as TriadOperand;
             var mutable = new MutableTriad(Number, Operation, op1, op2);
 
-            linkContainer.Add(this, mutable);
+            linkContainer.Add(this.Number, mutable);
 
             return mutable;
         }

@@ -39,13 +39,13 @@ namespace SPO_LR_Lib.Triads
             return Operation.GetHashCode() + Operand1.GetHashCode() + Operand2?.GetHashCode() ?? 0;
         }
 
-        public Triad GetImmutableTriad(Dictionary<MutableTriad, Triad> linkContainer)
+        public Triad GetImmutableTriad(Dictionary<int, Triad> linkContainer)
         {
-            TriadOperand op1 = Operand1 is MutableTriad tr1 ? linkContainer[tr1] : (TriadOperand)Operand1.Clone();
-            TriadOperand? op2 = Operand2 is MutableTriad tr2 ? linkContainer[tr2] : Operand2?.Clone() as TriadOperand;
+            TriadOperand op1 = Operand1 is MutableTriad tr1 ? linkContainer[tr1.Number] : (TriadOperand)Operand1.Clone();
+            TriadOperand? op2 = Operand2 is MutableTriad tr2 ? linkContainer[tr2.Number] : Operand2?.Clone() as TriadOperand;
 
             var triad = new Triad(Number, Operation, op1, op2);
-            linkContainer.Add(this, triad);
+            linkContainer.Add(this.Number, triad);
             return triad;
         }
     }

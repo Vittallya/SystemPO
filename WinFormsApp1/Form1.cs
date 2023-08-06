@@ -52,6 +52,7 @@ namespace WinFormsApp1
 
                         var optimizer = new TriadOptimizerBuilder().
                             AddReduceOptimizer().
+                            AddDeleteOptimizer().
                             Build();
 
                         var triadsOptimized = optimizer.Optimize(triads);
