@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace SPO_LR_Lib
 {
+    /// <summary>
+    /// Класс принимает на вход знаки унарных и бинарных операций. 
+    /// Первый метод GetTriads - получает на вход список корней дерева и возвращает на основе них список триад.  
+    /// Второй метод GetNextTriad внутренний, рекурсивный.
+    /// Третий метод простой печает список триад в виде текста
+    /// </summary>
     public class TriadConverter
     {
         private readonly IEnumerable<string> unaryOpSigns;
@@ -26,8 +27,11 @@ namespace SPO_LR_Lib
             return triads.Where(x => x.Operation != null);
         }
 
-        private int totalTriadsCount = 0;
-
+        /// <summary>
+        /// Вывод триад в виде текста
+        /// </summary>
+        /// <param name="triads">список триад</param>
+        /// <returns>поток текста</returns>
         public Stream PrintTriads(IEnumerable<Triad> triads)
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -58,6 +62,20 @@ namespace SPO_LR_Lib
             return st;
         }
 
+
+        /// <summary>
+        /// Метод принимает на вход какой-то узел дерева, а также ссылку на список триад. 
+        /// Если этот узел является идентификатором, то мы возвращаем объект класса TriadOperand. 
+        /// Если это не идентификатор, то есть операция, то мы смотрим на его потомки: 
+        /// если операнд это терминальный символ, то мы напрямую создаем объект класса TriadOperand, 
+        /// если же операнд является нетерминальным символом (E), то мы рекурсивно вызываем этот же метод, передав туда этот узел. 
+        /// То же самое со 2 операндом, если операция является бинарной. 
+        /// Далее полученную триаду добавляем в общий список триад.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="triads"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         private TriadOperand GetNextTriad(TreeNode root, ref List<Triad> triads)
         {
             IEnumerable<TreeNode> childs = root.Childs;

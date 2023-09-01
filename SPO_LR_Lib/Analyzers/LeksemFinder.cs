@@ -29,9 +29,20 @@ namespace SPO_LR_Lib
             {"error", "Ошибка" }
         };
 
-        public bool TryGetLeksems(string text, out IEnumerable<Group>? errors, out IEnumerable<(string name, string type)>? leksems)
+        public LeksemFinder()
         {
-            leksems = default;
+            
+        }
+
+        public LeksemFinder(Regex regex, Dictionary<string, string> dictionary)
+        {
+            this.regex = regex;
+            this.dictionary = dictionary;
+        }
+
+        public bool TryGetLeksems(string text, out IEnumerable<Group> errors, out IEnumerable<(string name, string type)> leksems)
+        {
+            leksems = new List<(string name, string type)>();
 
             //получение всех лексем, которые подпадают под шаблон регулярного выражения
             var matches = regex.Matches(text);
@@ -39,7 +50,7 @@ namespace SPO_LR_Lib
             //отбор из всех лексем только тех, которые успешно распознаны и их имена есть в списке ключей словаря
             IEnumerable<Group> groups = matches.
                 SelectMany(x => x.Groups.Values).
-                Where(x => x.Success && dictionary.Keys.Contains(x.Name));
+                Where(x => x.Success && dictionary.ContainsKey(x.Name));
 
             //отбор лексем, которые были распознаны как ошибка
             errors = groups.Where(x => x.Name == "error");
@@ -54,7 +65,12 @@ namespace SPO_LR_Lib
              * если ошибок не найдено, то преобразовать в таблицу из двух столбцов, где в 1-й столбец - это сама лексема, 
              * второй - тип лексемы, полученный с помощью словаря
             */
-            leksems = groups.Select(x => (name: x.Value.Trim(), type: x.Name));
+            var orderedGroups = groups.
+                SelectMany(x => x.Captures.Select(y => (x, y)).
+                GroupBy(x => x.y.Index)).
+                OrderBy(x => x.Key);
+
+            leksems = orderedGroups.SelectMany(x => x.Select(y => (name: y.y.Value.Trim(), type: y.x.Name)));
 
             return true;
         }

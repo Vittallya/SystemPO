@@ -1,5 +1,8 @@
 ﻿namespace SPO_LR_Lib
 {
+    /// <summary>
+    /// Класс, который представляет собой операнд триады
+    /// </summary>
     public class TriadOperand: ICloneable
     {
         /// <summary>

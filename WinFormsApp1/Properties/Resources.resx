@@ -124,4 +124,10 @@
   <data name="data2" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\data2.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="dataLR8" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\dataLR8.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="dataLR8New" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\dataLR8New.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>

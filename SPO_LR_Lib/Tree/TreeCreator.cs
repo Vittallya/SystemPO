@@ -1,27 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SPO_LR_Lib
+﻿namespace SPO_LR_Lib
 {
+    /// <summary>
+    /// Класс, который на основе результатов свертки синтаксического анализа возвращает 
+    /// дерево последовательных выражений.
+    /// </summary>
     internal class TreeCreator
     {
-        public TreeNode GetTreeView(IEnumerable<Node> list)
+        /// <summary>
+        /// Метод, который принимает список не связанных между собой объектов node и возвращает корень
+        /// получившегося дерева.
+        /// </summary>
+        /// <param name="list">список не связанных между собой объектов node</param>
+        /// <returns>корень получившегося дерева</returns>
+        public TreeNode GetTreeView(IEnumerable<Node> list, string startLetter)
         {
-            TreeNode root = new("E", SymbolType.NonTerminal, "", "", -1);
+            TreeNode root = new(startLetter, SymbolType.NonTerminal, "", "", -1);
 
             List<TreeNode> treeNodesNonTerminals = new() { root };
 
             foreach (Node node in list)
             {
-                //var lastNonTerminal = treeNodesNonTerminals.LastOrDefault(x => !x.Childs.Any());
+                //Из корня дерева получаем такой нетерминальный символ, который не имеет потомков.
                 var lastNonTerminal = root.GetLastEmptyNonTerminal();
-
+                //создаем дочерние узлы
                 var newTreeNodes = node.ReplacedSymbols.Select(x => new TreeNode(x.symbol, x.symbolType, x.origin, x.lexType, node.RuleNum));
+
+                //добавляем эти узлы в качестве потомков текущего найденного нетерминала
                 lastNonTerminal.AddChilds(newTreeNodes);
-                //treeNodesNonTerminals.AddRange(newTreeNodes.Where(x => x.SymbolType == SymbolType.NonTerminal));
             }
 
             return root;

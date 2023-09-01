@@ -79,5 +79,25 @@ namespace WinFormsApp1.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        internal static byte[] dataLR8 {
+            get {
+                object obj = ResourceManager.GetObject("dataLR8", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        internal static byte[] dataLR8New {
+            get {
+                object obj = ResourceManager.GetObject("dataLR8New", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

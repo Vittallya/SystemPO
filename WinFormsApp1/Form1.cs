@@ -36,38 +36,58 @@ namespace WinFormsApp1
                 if (data != null)
                 {
                     //создание экземпл€ра синтакс. анализатора
-                    var analyzer = new SyntaxAnalyzer(data.Rules, data.Matrix);
+                    var analyzer = new SyntaxAnalyzer(data);
                     //выполнение синтаксического анализа
-                    bool syntaxAnalyzeResult = analyzer.TryAnalyze(leksems, 
+                    //получение деревьев выражений на основе сверток в процессе синт. анализа
+                    bool syntaxAnalyzeResult = analyzer.TryAnalyze(leksems,
+                        ((string lex, string type) lexx) =>
+                        {
+                            return lexx.type switch
+                            {
+                                "identifier" or "constant" => "a",
+                                _ => lexx.lex,
+                            };
+                        },
+                        "E",
                         out IEnumerable<string>? syntaxErrors, out IEnumerable<SPO_LR_Lib.TreeNode>? rootNodes);
 
-
-
-
-                    //если ошибок нет
+                    //если синтаксических ошибок нет
                     if (syntaxAnalyzeResult)
                     {
                         var replacer = new TriadConverter(new[] { "not" }, new[] { "and", "xor", "or", ":=" });
+                        //получить триады на основе деревьев
                         var triads = replacer.GetTriads(rootNodes).ToList();
 
+                        //создать оптимизатор включающий свертку и удаление лишних операций
                         var optimizer = new TriadOptimizerBuilder().
                             AddReduceOptimizer().
                             AddDeleteOptimizer().
                             Build();
 
+                        //получить оптимизированный список  триад
                         var triadsOptimized = optimizer.Optimize(triads);
 
                         var form1 = new Form1();
-
+                        form1.Text = "—писок триад с оптимизацией";
                         using StreamReader reader = new(replacer.PrintTriads(triadsOptimized));
                         form1.richTextBox1.Text = reader.ReadToEnd();
-                        form1.ShowDialog(this);
+                        form1.Show(this);
+
+                        var form2 = new Form1();
+                        form2.Text = "—писок триад без оптимизации";
+                        using StreamReader reader2 = new(replacer.PrintTriads(triads));
+                        form2.richTextBox1.Text = reader2.ReadToEnd();
+                        form2.Show(this);
 
                     }
                     else
                     {
                         //если ошибки есть - вывести с новой строки
-                        MessageBox.Show("ќбнаружены ошибки: \n-" + string.Join("\n-", syntaxErrors), "—истема", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(
+                            "ќбнаружены ошибки: \n-" + string.Join("\n-", syntaxErrors), 
+                            "—истема", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Error);
                     }
 
                 }

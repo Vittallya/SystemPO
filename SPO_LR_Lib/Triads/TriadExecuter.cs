@@ -2,6 +2,10 @@
 
 namespace SPO_LR_Lib
 {
+    /// <summary>
+    /// Класс, который исполняет операцию триады и возвращает результат
+    /// в качестве операндов триады должны быть константы
+    /// </summary>
     internal class TriadExecuter
     {
         public string Execute(ITriad triad)

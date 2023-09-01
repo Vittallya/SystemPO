@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using SPO_LR_Lib.Analyzers;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
 
 namespace SPO_LR_Lib
 {
@@ -11,19 +14,17 @@ namespace SPO_LR_Lib
     //класс синтаксического анализатора
     public class SyntaxAnalyzer
     {
-        //массив правил
-        private readonly string[][] rules;
-        //матрица предшествования
-        private readonly Dictionary<string, Dictionary<string, string>> matrix;
         private readonly TreeCreator treeCreator;
+        private readonly IData data;
+        private readonly Func<Stack<(string value, SymbolType, string, string lexType)>, IEnumerable<string>, IEnumerable<(string, int)>, int>? resolver;
 
 
         //получение матрицы и правил через конструктор
-        public SyntaxAnalyzer(string[][] rules, Dictionary<string, Dictionary<string, string>> matrix) 
+        public SyntaxAnalyzer(IData data, Func<Stack<(string value, SymbolType, string, string lexType)>, IEnumerable<string>, IEnumerable<(string, int)>, int>? resolver = null) 
         {
-            this.rules = rules;
-            this.matrix = matrix;
             this.treeCreator = new TreeCreator();
+            this.data = data;
+            this.resolver = resolver;
         }
 
 
@@ -33,28 +34,30 @@ namespace SPO_LR_Lib
         /// <param name="lekems">входной параметр - список лексем и их тип</param>
         /// <param name="errors">вероятные ошибки при анализе</param>
         /// <returns>успех/не успех анализа</returns>
-        public bool TryAnalyze(IEnumerable<(string name, string type)> lekems, out IEnumerable<string>? errors, out IEnumerable<TreeNode>? rootNodes)
+        public bool TryAnalyze(IEnumerable<(string name, string type)> lekems, 
+            Func<(string name, string type), string> replacer,
+            string startLetter,
+            out IEnumerable<string> errors, out IEnumerable<TreeNode> rootNodes)
         {
             List<TreeNode> treeNodes = new();
             rootNodes = treeNodes;
-
 
             List<string> errorList = new();
             errors = errorList;
 
             //создание списка лексем, помещая в него конечный символ
-            Stack<(string name, string type)> leksemsList = new(lekems.Append(("end", "")).Reverse());
+            Stack<(string name, string type)> leksemsList = new(lekems.Append(("$", "")).Reverse());
             //создание стэка
             Stack<(string value, SymbolType type, string, string lexType)> stack = new();
             //помещение в стэк начального символа
-            stack.Push(("start", SymbolType.Terminal, "", ""));
+            stack.Push(("s", SymbolType.Terminal, "", ""));
 
 
             //цепочка вывода
             List<Node> nodes = new();
 
             //конечное состояние стэка
-            Stack<(string, SymbolType, string, string)> finalStackState = new(new []{("start", SymbolType.Terminal, "", ""), ("E", SymbolType.NonTerminal, "", "") });
+            Stack<(string, SymbolType, string, string)> finalStackState = new(new []{("s", SymbolType.Terminal, "", ""), ("E", SymbolType.NonTerminal, "", "") });
 
             while(true)
             {
@@ -62,9 +65,11 @@ namespace SPO_LR_Lib
                 (string lex, string type) = leksemsList.Peek();
                 string origin = lex;
 
+                lex = replacer((lex, type));
+
                 //если это константа или идентификатор
-                if (type == "identifier" || type == "constant")
-                    lex = "a"; //замена на символ a
+                //if (type == "identifier" || type == "constant")
+                    //lex = "a"; //замена на символ a
 
                 //получение первого терминального символа из стэка
                 (string stackTerminal, SymbolType _, string _, string _) = stack.FirstOrDefault(x => x.type == SymbolType.Terminal);
@@ -77,7 +82,7 @@ namespace SPO_LR_Lib
                 }
 
                 //проверка наличия отношения
-                if (!matrix[stackTerminal].TryGetValue(lex, out string? relation))
+                if(!data.HasRelationBetween(stackTerminal, lex, out string? relation))
                 {
                     //если нет отношения, ошибка
                     errorList.Add($"Нет отношения предшествования между символами '{stackTerminal}' и '{lex}'");
@@ -94,11 +99,12 @@ namespace SPO_LR_Lib
                         continue;
                     case ">":
                         //выполнение свертки
-                        Debug.Print("Стэк: {" + string.Join("} ; {", stack.Select(x => x.value)) + "}");
-                        Debug.Print("Список лексем: {" + string.Join("} ; {", leksemsList.Select(x => x.name)) + "}");
+                        Debug.Print("Стэк: {" + string.Join("} {", stack.Select(x => x.value)) + "}");
+                        Debug.Print("Список лексем: {" + string.Join("} {", leksemsList.Select(x => x.name)) + "}");
 
 
-                        int ruleNum = Fold(stack, out IEnumerable<(string, SymbolType, string, string)>? replacedSymbols);
+                        //int ruleNum = Fold(stack, out IEnumerable<(string, SymbolType, string, string)>? replacedSymbols);
+                        int ruleNum = Reduce(stack, out IEnumerable<(string, SymbolType, string, string)> replacedSymbols);
                         if (ruleNum == -1)
                         
                         {
@@ -108,11 +114,11 @@ namespace SPO_LR_Lib
                         }
 
 
-                        if (ruleNum != 5)
-                        {
-                            //пропускаем скобочки
-                            nodes.Add(new Node(replacedSymbols.Reverse(), ruleNum));
-                        }
+                        //if (ruleNum != 5)
+                        //{
+                        //    //пропускаем скобочки
+                        nodes.Add(new Node(replacedSymbols.Reverse(), ruleNum));
+                        //}
 
                         break;
 
@@ -121,9 +127,9 @@ namespace SPO_LR_Lib
                 //проверка стэка с его финальным состоянием, а также проверка, что в списке лексем остался только конечный символ
 
 
-                if (stack.Last().value == "start" && stack.SkipLast(1).All(x => x.value == "E"))
+                if (stack.Last().value == "s" && stack.SkipLast(1).All(x => x.value.All(char.IsUpper)))
                 {
-                    var treeNode = treeCreator.GetTreeView(nodes.Reverse<Node>());
+                    var treeNode = treeCreator.GetTreeView(nodes.Reverse<Node>(), startLetter);
                     treeNodes.Add(treeNode);
                     nodes.Clear();
 
@@ -131,13 +137,16 @@ namespace SPO_LR_Lib
                     Debug.Print("Стэк: {" + string.Join("} ; {", stack.Select(x => x.value)) + "}");
                     Debug.Print("Список лексем: {" + string.Join("} ; {", leksemsList.Select(x => x.name)) + "}");
 
-                    if (leksemsList.Any() && leksemsList.Peek().name == "end")
+                    if (leksemsList.Any() && leksemsList.Peek().name == "$")
                         return true;
                 }
 
             }
             
         }
+
+
+
 
 
         //функция свертки
@@ -148,11 +157,13 @@ namespace SPO_LR_Lib
             var stackStr = stack.Select(x => x.value).ToArray();
             replacedSymbols = null;
 
-            //пройтись по циклу по всем правилам
-            for (int i = 0; i < rules.Length; i++)
+            int i = 0;
+
+
+            foreach (var rule in data.GetRules())
             {
                 //взять очередное правило в обратном состоянии
-                var currentRule = rules[i].Reverse();
+                var currentRule = rule.rules.Reverse<string>();
                 int c = currentRule.Count();
 
                 //если это правило по длине больше, чем длина стэка, пропуск правила
@@ -165,18 +176,72 @@ namespace SPO_LR_Lib
                 replacedSymbols = list;
 
                 //если правило подходит, т.е. верхушка стэка ему соотвествует
-                if(Enumerable.SequenceEqual(currentRule, stackStr[..c]))
+                if (Enumerable.SequenceEqual(currentRule, stackStr[..c]))
                 {
                     //замена верхушки стэка на нетерминал E
                     int j = 0;
-                    while(j++ < c )
+                    while (j++ < c)
                         list.Add(stack.Pop());
-                    stack.Push(("E", SymbolType.NonTerminal, "", ""));
+                    stack.Push((rule.NonTerminalToReplace, SymbolType.NonTerminal, "", ""));
                     //возврат номера правила
                     return i;
                 }
-
+                i++;
             }
+            //правило не найдено
+            return -1;
+        }
+
+        //функция свертки
+        private int Reduce(Stack<(string value, SymbolType, string, string lexType)> stack,
+                         out IEnumerable<(string, SymbolType, string, string)> replacedSymbols)
+        {
+            //получение массива строчек из стэка
+            var stackStr = stack.Select(x => x.value).ToArray();
+
+            var list = new List<(string, SymbolType, string, string)>();
+            replacedSymbols = list;
+
+            var rules = data.GetRules();
+
+
+            int maxCountToReplace = 0;
+
+            rules = rules.Where(x => x.rules.Count <= stackStr.Length && Enumerable.SequenceEqual(stackStr[..x.rules.Count], x.rules.Reverse<string>()));
+            maxCountToReplace = rules.Max(x => x.rules.Count);
+
+            rules = rules.
+                OrderByDescending(x => x.rules.Count).
+                TakeWhile(x => x.rules.Count == maxCountToReplace).
+                ToList();
+
+
+            int count = rules.Count();
+
+            if (count > 0)
+            {
+                if(count > 1 && resolver is null)
+                    throw new ArgumentException("rules conflict without resolver");
+
+                int ruleNum = count == 1 ? rules.First().ruleNum : 
+                    resolver.Invoke(stack, rules.First().rules, rules.Select(x => (x.NonTerminalToReplace, x.ruleNum)));
+
+                var rule = rules.Single(x => x.ruleNum == ruleNum);
+
+                string nonTerminal = rule.NonTerminalToReplace;
+
+                int c = rule.rules.Count;
+
+                int j = 0;
+                while (j++ < c)
+                    list.Add(stack.Pop());
+                stack.Push((nonTerminal, SymbolType.NonTerminal, "", ""));
+
+
+                return ruleNum;
+            }
+
+
             //правило не найдено
             return -1;
         }
